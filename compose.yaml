@@ -1,0 +1,53 @@
+name: laravel-inertia-concepts
+
+services:
+  mysql:
+    image: container-registry.oracle.com/mysql/community-server:8.4
+    container_name: laravel-inertia-concepts-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-laravel_inertia_concepts}
+      MYSQL_USER: ${DB_USERNAME:-laravel_inertia_concepts_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    ports:
+      - "3307:3306"
+    volumes:
+      - laravel_inertia_concepts_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u\"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  phpmyadmin:
+    build:
+      context: ./.docker/phpmyadmin
+      args:
+        PHPMYADMIN_VERSION: 5.2.2
+    image: laravel-inertia-concepts-phpmyadmin:5.2.2
+    container_name: laravel-inertia-concepts-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: ${DB_USERNAME:-laravel_inertia_concepts_user}
+      PMA_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      PMA_BLOWFISH_SECRET: laravel-inertia-concepts-local-pma
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  laravel_inertia_concepts_mysql_data:
+    name: laravel_inertia_concepts_mysql_data
